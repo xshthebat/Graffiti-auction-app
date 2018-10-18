@@ -34,7 +34,7 @@ const ready = (socket) => {
                 if (item) {
                     item.property = {
                         freeze: 2,
-                        clues: 2,
+                        clues: 1,
                         pin: 2
                     };
                     // console.log('item.name', item.name);
@@ -42,6 +42,8 @@ const ready = (socket) => {
                     rooms[socket.room - 1].pictures.push(item.picture);
                     item.money = 3000;
                     item.getpicture = [];
+                    item.borrowmoney = 0;
+                    item.clues = ['这是线索1', '这是线索2']
                 }
             })
             roomstate[socket.room - 1] = gamestate.start; //游戏开始
@@ -56,7 +58,8 @@ const ready = (socket) => {
                     picture: item.picture,
                     money: item.money,
                     getpicture: item.getpicture,
-                    borrowmoney:0
+                    borrowmoney: item.borrowmoney,
+                    clues: item.clues
                 }
             }));
             let getter = -1;
@@ -64,12 +67,12 @@ const ready = (socket) => {
                 if (item) {
                     let time = 5;
                     let primise = new Promise((res, rej) => {
-                        console.log(roomtimer[socket.room-1][_index]);
-                        roomtimer[socket.room-1][_index].timer = setInterval(() => {
+                        console.log(roomtimer[socket.room - 1][_index]);
+                        roomtimer[socket.room - 1][_index].timer = setInterval(() => {
                             item.emit('readytime', time);
                             time--;
                             if (time === 0) {
-                                clearInterval(roomtimer[socket.room-1][_index].timer);
+                                clearInterval(roomtimer[socket.room - 1][_index].timer);
                                 res()
                             }
                         }, 1000);
@@ -78,7 +81,7 @@ const ready = (socket) => {
                         return new Promise((res, rej) => {
                             item.emit('drawstart');
                             let drawtime = 12  //默认120
-                            roomtimer[socket.room-1][_index].newtimer = setInterval(() => {
+                            roomtimer[socket.room - 1][_index].newtimer = setInterval(() => {
                                 item.emit('drawtime', drawtime);
                                 // console.log(drawtime);
                                 drawtime--;
@@ -100,14 +103,14 @@ const ready = (socket) => {
                                         }
                                     }, 1000);
                                     res(imgs);
-                                    clearInterval(roomtimer[socket.room-1][_index].newtimer);
+                                    clearInterval(roomtimer[socket.room - 1][_index].newtimer);
                                 }
                                 if (drawtime === -1) {
                                     console.log('时间到');
-                                    clearInterval(roomtimer[socket.room-1][_index].newtimer);
+                                    clearInterval(roomtimer[socket.room - 1][_index].newtimer);
                                     //轮询等待 后续 上传完
                                     item.emit('drawtimeout', drawtime);
-                                    roomtimer[socket.room-1][_index].timerr = setInterval(() => {
+                                    roomtimer[socket.room - 1][_index].timerr = setInterval(() => {
                                         if (roomimg[socket.room - 1].length === 2 * num) {
                                             console.log('全部完成')
                                             console.log(rooms[parseInt(socket.room) - 1].pictures);
@@ -123,7 +126,7 @@ const ready = (socket) => {
                                                 }
                                             }, 1000);
                                             res(imgs);
-                                            clearInterval(roomtimer[socket.room-1][_index].timerr);
+                                            clearInterval(roomtimer[socket.room - 1][_index].timerr);
                                         }
                                     }, 50);
                                 }
@@ -141,7 +144,7 @@ const ready = (socket) => {
                             imgsmessage.push(`拍卖师:  接下来是本场第${wordnum[i + 1]}幅大作登场,${handlenum[i]}`);
                         }
                         imgsmessage.push(`拍卖师:  铛铛铛!  现在是本场最后一幅作品 请抓紧机会`);
-                        roomtimer[socket.room-1][_index].timerrr = setInterval(() => {
+                        roomtimer[socket.room - 1][_index].timerrr = setInterval(() => {
                             if (time === 2) {
                                 if (getter !== -1 && getter === _index) {
                                     console.log('拍的者:', getter);
@@ -154,7 +157,9 @@ const ready = (socket) => {
                                             property: item.property,
                                             picture: item.picture,
                                             money: item.money,
-                                            getpicture: item.getpicture
+                                            getpicture: item.getpicture,
+                                            borrowmoney: item.borrowmoney,
+                                            clues: item.clues
                                         }
                                     }));
                                     item.emit('sendmessage', `拍卖师:  恭喜${rooms[socket.room - 1][getter].name}以${imgs[index].newpirce}拍得价值为${9999}的名作`);
@@ -169,7 +174,7 @@ const ready = (socket) => {
                                     getter = -1;
                                 } else {
                                     //游戏结束 给客户端送去游戏内信息结算
-                                    clearInterval(roomtimer[socket.room-1][_index].timerrr);
+                                    clearInterval(roomtimer[socket.room - 1][_index].timerrr);
                                 }
                             }
                             if (!init) {
@@ -185,23 +190,89 @@ const ready = (socket) => {
                                     imgs[index].newpirce = price;
                                     io.in(socket.room).emit('setpicurespirce', price);
                                 })
-                                item.on('getmoney',(index)=>{
-                                    rooms[socket.room - 1][index].money = rooms[socket.room - 1][index].money + 1000;
-                                    rooms[socket.room - 1][index].borrowmoney = rooms[socket.room - 1][index].borrowmoney + 1100;    
-                                    //所有人改
-                                    io.in(socket.room).emit('getpersons', rooms[socket.room - 1].map(item => {
+                                item.on('pin',(obj)=>{
+                                    if(rooms[socket.room-1][obj.getter].money>=obj.pirce){
+                                        console.log('钉子使用成功',_index,obj.getter);
+                                        getter = obj.getter;
+                                        console.log(getter,obj.pirce);
+                                        io.in(socket.room).emit('setgetters', getter);
+                                        imgs[index].newpirce = obj.pirce;
+                                        io.in(socket.room).emit('setpicurespirce', obj.pirce);   
+                                        item.emit('pinout',true);
+
+                                    } else{
+                                        item.emit('pinout',false);
+                                    }
+                                    console.log('对应道具-1');
+                                    rooms[socket.room - 1][_index].money = rooms[socket.room - 1][_index].money - 100; //道具扣费
+                                    rooms[socket.room - 1][_index].property.pin = rooms[socket.room - 1][_index].property.pin-1;
+                                    io.in(socket.room).emit('getpersons', rooms[socket.room - 1].map((item) => {
                                         return {
                                             name: item.name,
                                             position: item.position,
                                             property: item.property,
                                             picture: item.picture,
                                             money: item.money,
-                                            getpicture: item.getpicture
+                                            getpicture: item.getpicture,
+                                            borrowmoney: item.borrowmoney,
+                                            clues: item.clues
+                                        }
+                                    }));
+                                })
+                                item.on('freeze',(index)=>{
+                                    rooms[socket.room - 1][_index].emit('freezesuccess');
+                                    rooms[socket.room - 1][index].emit('freeze');
+                                    rooms[socket.room - 1][_index].money = rooms[socket.room - 1][_index].money - 100; //道具扣费
+                                    rooms[socket.room - 1][_index].property.freeze = rooms[socket.room - 1][_index].property.freeze-1;
+                                    io.in(socket.room).emit('getpersons', rooms[socket.room - 1].map((item) => {
+                                        return {
+                                            name: item.name,
+                                            position: item.position,
+                                            property: item.property,
+                                            picture: item.picture,
+                                            money: item.money,
+                                            getpicture: item.getpicture,
+                                            borrowmoney: item.borrowmoney,
+                                            clues: item.clues
+                                        }
+                                    }));
+                                })
+                                item.on('addclues',()=>{
+                                    item.clues.push("这是线索3");
+                                    rooms[socket.room - 1][_index].money = rooms[socket.room - 1][_index].money - 100; //道具扣费
+                                    rooms[socket.room - 1][_index].property.clues = rooms[socket.room - 1][_index].property.clues-1;
+                                    io.in(socket.room).emit('getpersons', rooms[socket.room - 1].map((item) => {
+                                        return {
+                                            name: item.name,
+                                            position: item.position,
+                                            property: item.property,
+                                            picture: item.picture,
+                                            money: item.money,
+                                            getpicture: item.getpicture,
+                                            borrowmoney: item.borrowmoney,
+                                            clues: item.clues
+                                        }
+                                    }));
+                                })
+                                item.on('getmoney', (index) => {
+                                    rooms[socket.room - 1][index].money = rooms[socket.room - 1][index].money + 1000;
+                                    rooms[socket.room - 1][index].borrowmoney = rooms[socket.room - 1][index].borrowmoney + 1100;
+                                    //所有人改
+                                    io.in(socket.room).emit('getpersons', rooms[socket.room - 1].map((item) => {
+                                        return {
+                                            name: item.name,
+                                            position: item.position,
+                                            property: item.property,
+                                            picture: item.picture,
+                                            money: item.money,
+                                            getpicture: item.getpicture,
+                                            borrowmoney: item.borrowmoney,
+                                            clues: item.clues
                                         }
                                     }));
                                     item.emit('getmoney');
                                 })
-                                init = true; 
+                                init = true;
                             }
                             time--;
                         }, 1500)
