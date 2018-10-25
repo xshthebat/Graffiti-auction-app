@@ -6,7 +6,7 @@ const disconnect = (socket)=>{
         console.log(socket.name + '离开房间' + socket.room);
         delete names[socket.id];
         io.in(socket.room).emit('sendmessage', socket.name + '离开房间');
-        if(rooms[socket.room - 1]!==0){
+        if(rooms[socket.room - 1]!==0&&roomstate[socket.room-1]!==3){
             console.log('强制退出');
             roomtimer[socket.room-1].forEach(obj => {
                 for(var key in obj){
@@ -17,7 +17,7 @@ const disconnect = (socket)=>{
             });
             io.in(socket.room).emit('theonequite');
         }
-        console.log(roomstate[socket.room - 1]);
+        // console.log(roomstate[socket.room - 1]);
         rooms[socket.room - 1][socket.position - 1] = 0; //对应房间位置清空
         //判断房间是否为空 若为空 就删除房间
         io.in(socket.room).emit('getpersons', rooms[socket.room - 1].map(item => {

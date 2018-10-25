@@ -1,4 +1,5 @@
 let io = require('../socket/io');
+let getimg = require('../../data/getgamedata');
 let { rooms, roomstate, roomimg, gamestate, roomtimer } = require('../gamedata/data.js');
 const wordnum = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 const handlenum = [`请注意'线索'按钮，里面的信息非常重要!`, `请注意'道具'按钮，里面有许多好玩的东西!`, `请注意'银行'按钮，当你钱不够时可以先借点`, '', '', '', '', '', '', '']
@@ -27,6 +28,7 @@ const ready = (socket) => {
         if (allready && num >= 2) {
             console.log('房间' + socket.room + '开始游戏');
             //初始化画作
+            let imgdata = getimg(num);
             //乱序数组；
             rooms[socket.room - 1].pictures = [];
             rooms[socket.room - 1].forEach((item, index) => {
@@ -38,12 +40,12 @@ const ready = (socket) => {
                         pin: 2
                     };
                     // console.log('item.name', item.name);
-                    item.picture = [{ user: item.name, name: '玩家1图1', pirce: 500 }, { user: item.name, name: '玩家1图1', pirce: 1000 }];
+                    item.picture = [{ user: item.name, ...imgdata.img[index][0] }, { user: item.name, ...imgdata.img[index][1] }];
                     rooms[socket.room - 1].pictures.push(item.picture);
                     item.money = 3000;
                     item.getpicture = [];
                     item.borrowmoney = 0;
-                    item.clues = ['这是线索1', '这是线索2']
+                    item.clues = [imgdata.hint[2*((index+1)%num)], imgdata.hint[2*((index+1)%num)+1]]
                 }
             })
             roomstate[socket.room - 1] = gamestate.start; //游戏开始
@@ -80,7 +82,7 @@ const ready = (socket) => {
                     primise.then(() => {
                         return new Promise((res, rej) => {
                             item.emit('drawstart');
-                            let drawtime = 12  //默认120
+                            let drawtime = 5  //默认120
                             roomtimer[socket.room - 1][_index].newtimer = setInterval(() => {
                                 item.emit('drawtime', drawtime);
                                 // console.log(drawtime);
@@ -136,7 +138,7 @@ const ready = (socket) => {
                         //游戏进程开始
                         let index = 0;
                         let init = false
-                        let time = 60;
+                        let time = 10;
                         let imgsmessage = [];
                         imgsmessage.push(`拍卖师:  铛铛铛! 拍卖开始! 首先是拍卖的是本场第一幅作品~`);
                         for (let i = 0; i < imgs.length - 2; i++) {
@@ -145,12 +147,31 @@ const ready = (socket) => {
                         }
                         imgsmessage.push(`拍卖师:  铛铛铛!  现在是本场最后一幅作品 请抓紧机会`);
                         roomtimer[socket.room - 1][_index].timerrr = setInterval(() => {
-                            if (time === 2) {
+                            // if(time===14){
+                            //     item.emit('sendmessage', `${rooms[socket.room - 1][getter].name}一次`);
+                            // }
+                            // if(time===11){
+                            //     item.emit('sendmessage', `${rooms[socket.room - 1][getter].name}两次`);
+                            // }
+                            // if(time===8){
+                            //     item.emit('sendmessage', `${rooms[socket.room - 1][getter].name}三次`);
+                            // }
+                            // if(time===5){
+                            //     item.emit('sendmessage', `${rooms[socket.room - 1][getter].name}成交`);
+                            // }
+                            if (time === 1) {
                                 if (getter !== -1 && getter === _index) {
-                                    console.log('拍的者:', getter);
                                     rooms[socket.room - 1][getter].money = rooms[socket.room - 1][getter].money - imgs[index].newpirce;
                                     rooms[socket.room - 1][getter].getpicture.push(imgs[index]); //拍得画作
-                                    item.emit('getpersons', rooms[socket.room - 1].map(item => {
+                                    //计算价值
+                                    rooms[socket.room - 1][getter].money = rooms[socket.room-1][getter].money + imgs[index].value;
+                                    // console.log(index/2);
+                                    if(getter!==Math.floor(index/2)){
+                                        rooms[socket.room - 1][Math.floor(index/2)].money = rooms[socket.room-1][Math.floor(index/2)].money + imgs[index].newpirce;
+                                        rooms[socket.room - 1][Math.floor(index/2)].emit('sendmessage',`恭喜你收入${imgs[index].newpirce}元`);
+                                        console.log('自己买自己没有价钱');   
+                                    }
+                                    io.in(socket.room).emit('getpersons', rooms[socket.room - 1].map(item => {
                                         return {
                                             name: item.name,
                                             position: item.position,
@@ -162,7 +183,7 @@ const ready = (socket) => {
                                             clues: item.clues
                                         }
                                     }));
-                                    item.emit('sendmessage', `拍卖师:  恭喜${rooms[socket.room - 1][getter].name}以${imgs[index].newpirce}拍得价值为${9999}的名作`);
+                                    io.in(socket.room).emit('sendmessage', `拍卖师:  恭喜${rooms[socket.room - 1][getter].name}以${imgs[index].newpirce}拍得价值为${imgs[index].value}的作品 ${(imgs[index].newpirce-imgs[index].value)<0?'获利':'亏损'}${Math.abs(imgs[index].newpirce-imgs[index].value)}元`);
                                 }
                             }
                             if (time === 0) {
@@ -170,11 +191,35 @@ const ready = (socket) => {
                                 if (index !== imgs.length - 1) {
                                     index++;
                                     init = false;
-                                    time = 60;
+                                    time = 10;
                                     getter = -1;
                                 } else {
                                     //游戏结束 给客户端送去游戏内信息结算
-                                    clearInterval(roomtimer[socket.room - 1][_index].timerrr);
+                                    if(roomstate[socket.room-1]!==gamestate.end){
+                                        roomstate[socket.room-1] = gamestate.end
+                                    }
+                                    io.in(socket.room).emit('buyend');
+                                    setTimeout(()=>{
+                                        io.in(socket.room).emit('getpersons', rooms[socket.room - 1].map((item) => {
+                                            return {
+                                                name: item.name,
+                                                position: item.position,
+                                                property: item.property,
+                                                picture: item.picture,
+                                                money: item.money-item.borrowmoney,
+                                                getpicture: item.getpicture,
+                                                borrowmoney: item.borrowmoney,
+                                                clues: item.clues
+                                            }
+                                        }));
+                                    },900);
+                                    roomtimer[socket.room-1].forEach(obj => {
+                                        for(var key in obj){
+                                            if(obj[key]){
+                                                clearInterval(obj[key]);
+                                            }
+                                        }
+                                    });
                                 }
                             }
                             if (!init) {
@@ -238,7 +283,7 @@ const ready = (socket) => {
                                     }));
                                 })
                                 item.on('addclues',()=>{
-                                    item.clues.push("这是线索3");
+                                    item.clues.push(imgdata.hint[2*((_index+2)%num)]);
                                     rooms[socket.room - 1][_index].money = rooms[socket.room - 1][_index].money - 100; //道具扣费
                                     rooms[socket.room - 1][_index].property.clues = rooms[socket.room - 1][_index].property.clues-1;
                                     io.in(socket.room).emit('getpersons', rooms[socket.room - 1].map((item) => {

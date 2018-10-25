@@ -2,7 +2,7 @@ let {rooms,names}=require('../gamedata/data');
 let io = require('../socket/io');
 const joinroom = (socket)=>{
      socket.on('joinroom', (data) => {
-        console.log(data.name + '加入房间', data.room);
+        // console.log(data.name + '加入房间', data.room);
         socket.name = data.name;
         socket.room = data.room;
         socket.position = data.position;

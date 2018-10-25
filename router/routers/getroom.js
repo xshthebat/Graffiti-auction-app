@@ -1,6 +1,6 @@
 let {rooms,roomstate,roomimg,gamestate,roomtimer}=require('../../socket/gamedata/data.js');
 const getroom = function (req,res) {
-    console.log(res);
+    // console.log(res);
     let room = {
         room: undefined,
         position: undefined,
@@ -23,8 +23,8 @@ const getroom = function (req,res) {
         })
         if (!room.join) {
             rooms.push([0, 0, 0, 0, 0]); //建房
-            roomimg[index] = []; //初始图片存储
-            roomtimer[index] = [{},{},{},{},{}]; //初始化定时器程序
+            roomimg[rooms.length-1] = []; //初始图片存储
+            roomtimer[rooms.length-1] = [{},{},{},{},{}]; //初始化定时器程序
             roomstate.push(gamestate.getready); //房间游戏状态
             rooms.forEach((val, index) => {
                 if (val && roomstate[index] === gamestate.getready) {
