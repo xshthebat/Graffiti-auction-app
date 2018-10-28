@@ -67,7 +67,7 @@ const ready = (socket) => {
             let getter = -1;
             rooms[socket.room - 1].forEach((item, _index) => {
                 if (item) {
-                    let time = 5;
+                    let time = 10;
                     let primise = new Promise((res, rej) => {
                         console.log(roomtimer[socket.room - 1][_index]);
                         roomtimer[socket.room - 1][_index].timer = setInterval(() => {
@@ -82,7 +82,7 @@ const ready = (socket) => {
                     primise.then(() => {
                         return new Promise((res, rej) => {
                             item.emit('drawstart');
-                            let drawtime = 5  //默认120
+                            let drawtime = 10  //默认120
                             roomtimer[socket.room - 1][_index].newtimer = setInterval(() => {
                                 item.emit('drawtime', drawtime);
                                 // console.log(drawtime);
@@ -138,7 +138,7 @@ const ready = (socket) => {
                         //游戏进程开始
                         let index = 0;
                         let init = false
-                        let time = 10;
+                        let time = 6;
                         let imgsmessage = [];
                         imgsmessage.push(`拍卖师:  铛铛铛! 拍卖开始! 首先是拍卖的是本场第一幅作品~`);
                         for (let i = 0; i < imgs.length - 2; i++) {
@@ -184,6 +184,9 @@ const ready = (socket) => {
                                         }
                                     }));
                                     io.in(socket.room).emit('sendmessage', `拍卖师:  恭喜${rooms[socket.room - 1][getter].name}以${imgs[index].newpirce}拍得价值为${imgs[index].value}的作品 ${(imgs[index].newpirce-imgs[index].value)<0?'获利':'亏损'}${Math.abs(imgs[index].newpirce-imgs[index].value)}元`);
+                                    io.in(socket.room).emit('sendimgmessage', `拍卖师:  恭喜${rooms[socket.room - 1][getter].name}以${imgs[index].newpirce}拍得价值为${imgs[index].value}的作品 ${(imgs[index].newpirce-imgs[index].value)<0?'获利':'亏损'}${Math.abs(imgs[index].newpirce-imgs[index].value)}元`);
+                                } else{
+                                    item.emit('sendimgmessage', `拍卖师:  此画流拍`);
                                 }
                             }
                             if (time === 0) {
@@ -191,7 +194,7 @@ const ready = (socket) => {
                                 if (index !== imgs.length - 1) {
                                     index++;
                                     init = false;
-                                    time = 10;
+                                    time = 6;
                                     getter = -1;
                                 } else {
                                     //游戏结束 给客户端送去游戏内信息结算

@@ -6,7 +6,7 @@ const disconnect = (socket)=>{
         console.log(socket.name + '离开房间' + socket.room);
         delete names[socket.id];
         io.in(socket.room).emit('sendmessage', socket.name + '离开房间');
-        if(rooms[socket.room - 1]!==0&&roomstate[socket.room-1]!==3){
+        if(rooms[socket.room - 1]!==0&&roomstate[socket.room-1]!==3&&roomstate[socket.room-1]!==0){
             console.log('强制退出');
             roomtimer[socket.room-1].forEach(obj => {
                 for(var key in obj){
