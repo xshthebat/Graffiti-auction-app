@@ -82,7 +82,7 @@ const ready = (socket) => {
                     primise.then(() => {
                         return new Promise((res, rej) => {
                             item.emit('drawstart');
-                            let drawtime = 10  //默认120
+                            let drawtime = 240  //默认120
                             roomtimer[socket.room - 1][_index].newtimer = setInterval(() => {
                                 item.emit('drawtime', drawtime);
                                 // console.log(drawtime);
@@ -138,7 +138,7 @@ const ready = (socket) => {
                         //游戏进程开始
                         let index = 0;
                         let init = false
-                        let time = 6;
+                        let time = 25;
                         let imgsmessage = [];
                         imgsmessage.push(`拍卖师:  铛铛铛! 拍卖开始! 首先是拍卖的是本场第一幅作品~`);
                         for (let i = 0; i < imgs.length - 2; i++) {
@@ -151,7 +151,7 @@ const ready = (socket) => {
                             //     item.emit('sendmessage', `${rooms[socket.room - 1][getter].name}一次`);
                             // }
                             // if(time===11){
-                            //     item.emit('sendmessage', `${rooms[socket.room - 1][getter].name}两次`);
+                            //     item.em&& getter === _index)it('sendmessage', `${rooms[socket.room - 1][getter].name}两次`);
                             // }
                             // if(time===8){
                             //     item.emit('sendmessage', `${rooms[socket.room - 1][getter].name}三次`);
@@ -185,25 +185,26 @@ const ready = (socket) => {
                                     }));
                                     io.in(socket.room).emit('sendmessage', `拍卖师:  恭喜${rooms[socket.room - 1][getter].name}以${imgs[index].newpirce}拍得价值为${imgs[index].value}的作品 ${(imgs[index].newpirce-imgs[index].value)<0?'获利':'亏损'}${Math.abs(imgs[index].newpirce-imgs[index].value)}元`);
                                     io.in(socket.room).emit('sendimgmessage', `拍卖师:  恭喜${rooms[socket.room - 1][getter].name}以${imgs[index].newpirce}拍得价值为${imgs[index].value}的作品 ${(imgs[index].newpirce-imgs[index].value)<0?'获利':'亏损'}${Math.abs(imgs[index].newpirce-imgs[index].value)}元`);
-                                } else{
+                                } else if(getter===-1){
                                     item.emit('sendimgmessage', `拍卖师:  此画流拍`);
-                                }
+                                    getter ===-2;
+                                } 
                             }
                             if (time === 0) {
                                 //结算本次拍卖信息
                                 if (index !== imgs.length - 1) {
                                     index++;
                                     init = false;
-                                    time = 6;
+                                    time = 25;
                                     getter = -1;
+                                    console.log('拍卖成功');
                                 } else {
                                     //游戏结束 给客户端送去游戏内信息结算
                                     if(roomstate[socket.room-1]!==gamestate.end){
                                         roomstate[socket.room-1] = gamestate.end
                                     }
                                     io.in(socket.room).emit('buyend');
-                                    setTimeout(()=>{
-                                        io.in(socket.room).emit('getpersons', rooms[socket.room - 1].map((item) => {
+                                    io.in(socket.room).emit('getpersons', rooms[socket.room - 1].map((item) => {
                                             return {
                                                 name: item.name,
                                                 position: item.position,
@@ -215,7 +216,6 @@ const ready = (socket) => {
                                                 clues: item.clues
                                             }
                                         }));
-                                    },900);
                                     roomtimer[socket.room-1].forEach(obj => {
                                         for(var key in obj){
                                             if(obj[key]){
